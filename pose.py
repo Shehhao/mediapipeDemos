@@ -1,5 +1,6 @@
 import argparse
 
+import cv2  # 新增
 import mediapipe as mp
 import numpy as np
 
@@ -16,11 +17,20 @@ def main(inp):
     else:
         source = FileSource(inp)
 
+    out = None  # 用來記錄 VideoWriter 實例
+
     with mp_pose.Pose(
         min_detection_confidence=0.5, min_tracking_confidence=0.5
     ) as pose:
 
         for idx, (frame, frame_rgb) in enumerate(source):
+            # 若尚未初始化 out，則在第一個 frame 時初始化
+            if out is None:
+                height, width = frame.shape[:2]
+                # 若 source 有 fps 屬性可用，否則預設 30fps
+                fps = getattr(source, 'fps', 30)
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                out = cv2.VideoWriter('output.mp4', fourcc, fps, (width, height))
 
             results = pose.process(frame_rgb)
 
@@ -40,7 +50,15 @@ def main(inp):
                 )
                 print(np_landmarks.shape)
 
+            # 將處理後的 frame 寫出到檔案
+            if out is not None:
+                out.write(frame)
+
             source.show(frame)
+
+    # 迴圈結束後釋放資源
+    if out is not None:
+        out.release()
 
 
 if __name__ == "__main__":
