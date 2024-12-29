@@ -17,10 +17,13 @@ def convert_videos(input_dir, output_dir):
     for ext in video_extensions:
         input_files.extend(Path(input_dir).glob(f'*{ext}'))
     
-    # 初始化姿勢偵測器
+    # 初始化多人姿勢偵測器，調整參數以優化多人偵測
     with mp_pose.Pose(
         min_detection_confidence=0.5,
-        min_tracking_confidence=0.5
+        min_tracking_confidence=0.5,
+        model_complexity=2,  # 使用更複雜的模型以提高準確度
+        enable_segmentation=True,  # 啟用分割以幫助區分多人
+        smooth_segmentation=True  # 平滑分割結果
     ) as pose:
         
         for input_file in input_files:
@@ -55,16 +58,30 @@ def convert_videos(input_dir, output_dir):
                 
                 # 轉換 BGR 到 RGB
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frame_rgb.flags.writeable = False  # 提高性能
                 
-                # 進行姿勢偵測
+                # 進行多人姿勢偵測
                 results = pose.process(frame_rgb)
                 
-                # 繪製姿勢骨架
+                frame_rgb.flags.writeable = True
+                
+                # 繪製所有偵測到的姿勢
                 if results.pose_landmarks:
+                    # 只繪製骨架，不包含臉部和手部細節
                     mp_drawing.draw_landmarks(
                         frame,
                         results.pose_landmarks,
-                        mp_pose.POSE_CONNECTIONS
+                        mp_pose.POSE_CONNECTIONS,
+                        landmark_drawing_spec=mp_drawing.DrawingSpec(
+                            color=(255, 255, 255),
+                            thickness=2,
+                            circle_radius=2
+                        ),
+                        connection_drawing_spec=mp_drawing.DrawingSpec(
+                            color=(0, 252, 124),
+                            thickness=2,
+                            circle_radius=1
+                        )
                     )
                 
                 # 寫入處理後的 frame 到輸出影片
