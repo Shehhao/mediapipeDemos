@@ -1,6 +1,7 @@
 import os
 import cv2
 import mediapipe as mp
+import numpy as np
 from pathlib import Path
 
 def convert_videos(input_dir, output_dir):
@@ -17,13 +18,12 @@ def convert_videos(input_dir, output_dir):
     for ext in video_extensions:
         input_files.extend(Path(input_dir).glob(f'*{ext}'))
     
-    # 初始化多人姿勢偵測器，調整參數以優化多人偵測
+    # 初始化姿勢偵測器，調整參數提高準確度
     with mp_pose.Pose(
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-        model_complexity=2,  # 使用更複雜的模型以提高準確度
-        enable_segmentation=True,  # 啟用分割以幫助區分多人
-        smooth_segmentation=True  # 平滑分割結果
+        min_detection_confidence=0.5,    # 提高信心閾值
+        min_tracking_confidence=0.5,     # 提高追蹤閾值
+        model_complexity=2,              # 使用更複雜的模型
+        smooth_landmarks=True            # 啟用平滑處理
     ) as pose:
         
         for input_file in input_files:
@@ -58,16 +58,15 @@ def convert_videos(input_dir, output_dir):
                 
                 # 轉換 BGR 到 RGB
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame_rgb.flags.writeable = False  # 提高性能
+                frame_rgb.flags.writeable = False
                 
-                # 進行多人姿勢偵測
+                # 進行姿勢偵測
                 results = pose.process(frame_rgb)
-                
                 frame_rgb.flags.writeable = True
                 
-                # 繪製所有偵測到的姿勢
+                # 如果偵測到姿勢，將結果繪製在原始影格上
                 if results.pose_landmarks:
-                    # 只繪製骨架，不包含臉部和手部細節
+                    # 繪製骨架
                     mp_drawing.draw_landmarks(
                         frame,
                         results.pose_landmarks,
