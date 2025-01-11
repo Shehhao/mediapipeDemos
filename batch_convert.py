@@ -42,9 +42,20 @@ def convert_videos(input_dir, output_dir):
             height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             fps = int(cap.get(cv2.CAP_PROP_FPS))
             
-            # 建立輸出影片寫入器
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(str(output_file), fourcc, fps, (width, height))
+            # 建立輸出影片寫入器，使用 H.264 編碼
+            fourcc = cv2.VideoWriter_fourcc(*'avc1')  # 使用 H.264 編碼
+            out = cv2.VideoWriter(
+                str(output_file),
+                fourcc,
+                fps,
+                (width, height),
+                isColor=True
+            )
+            
+            if not out.isOpened():
+                print(f"無法創建輸出影片: {output_file}")
+                cap.release()
+                continue
             
             # 計數處理的幀數
             frame_count = 0
